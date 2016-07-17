@@ -2,16 +2,24 @@ local function set_bot_photo(msg, success, result)
   local receiver = get_receiver(msg)
   if success then
     local file = 'data/photos/bot.jpg'
+    local hash = 'group:'..msg.to.id
+    local group_lang = redis:hget(hash,'lang')
     print('File downloaded to:', result)
     os.rename(result, file)
     print('File moved to:', file)
     set_profile_photo(file, ok_cb, false)
+     if group_lang then
     send_large_msg(receiver, 'Photo changed!', ok_cb, false)
+else
+    send_large_msg(receiver, 'عکس ذخیره شد!', ok_cb, false)
     redis:del("bot:photo")
-  else
+  elseif group_lang then
     print('Error downloading: '..msg.id)
     send_large_msg(receiver, 'Failed, please try again!', ok_cb, false)
+else
+    send_large_msg(receiver, 'ناموفق!لطفا مجددا تلاش کنید!', ok_cb, false)
   end
+ end
 end
 
 --Function to add log supergroup
@@ -167,36 +175,79 @@ local function run(msg,matches)
     end
     if matches[1] == "setbotphoto" then
     	redis:set("bot:photo", "waiting")
+          local hash = 'group:'..msg.to.id
+          local group_lang = redis:hget(hash,'lang')
+            if group_lang then
     	return 'Please send me bot photo now'
+    else
+    	return 'لطفا عکس جدید روبات را ارسال کنید'
     end
+end
     if matches[1] == "markread" then
     	if matches[2] == "on" then
     		redis:set("bot:markread", "on")
+                   local hash = 'group:'..msg.to.id
+                   local group_lang = redis:hget(hash,'lang')
+                     if group_lang then
     		return "Mark read > on"
+    	else
+    		return "خوانش متن > روشن"
     	end
+    end
     	if matches[2] == "off" then
     		redis:del("bot:markread")
+    	           local hash = 'group:'..msg.to.id
+                   local group_lang = redis:hget(hash,'lang')
+                     if group_lang then
     		return "Mark read > off"
+    	else
+    		return "خوانش متن > خاموش"
     	end
+    end
     	return
     end
+end
     if matches[1] == "pm" then
     	local text = "Message From "..(msg.from.username or msg.from.last_name).."\n\nMessage : "..matches[3]
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+          if group_lang then
     	send_large_msg("user#id"..matches[2],text)
     	return "Message has been sent"
+    else
+    	return "پیام ارسال شد!"
     end
+end
     
     if matches[1] == "pmblock" then
     	if is_admin2(matches[2]) then
+    	  local hash = 'group:'..msg.to.id
+          local group_lang = redis:hget(hash,'lang')
+            if group_lang then
     		return "You can't block admins"
+    	else
+    		return "شما نمیتوانید ادمین ها را بلاک کنید"
     	end
+end
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+          if group_lang then
     	block_user("user#id"..matches[2],ok_cb,false)
     	return "User blocked"
+    else
+    	return "کاربر بلاک شد"
     end
+ end
     if matches[1] == "pmunblock" then
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+          if group_lang then
     	unblock_user("user#id"..matches[2],ok_cb,false)
     	return "User unblocked"
+    else
+    	return "کاربر آنبلاک شد"
     end
+ end
     if matches[1] == "import" then--join by group link
     	local hash = parsed_url(matches[2])
     	import_chat_link(hash,ok_cb,false)
@@ -205,22 +256,39 @@ local function run(msg,matches)
 	    if not is_sudo(msg) then-- Sudo only
     		return
     	end
+          local hash = 'group:'..msg.to.id
+          local group_lang = redis:hget(hash,'lang')
+            if group_lang then
       get_contact_list(get_contact_list_callback, {target = msg.from.id})
       return "I've sent contact list with both json and text format to your private"
+else
+      return "لیست مخاطبین در چت خصوصی ارسال شد"
     end
+end
     if matches[1] == "delcontact" then
 	    if not is_sudo(msg) then-- Sudo only
     		return
     	end
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+          if group_lang then
       del_contact("user#id"..matches[2],ok_cb,false)
       return "User "..matches[2].." removed from contact list"
+else
+      return "کاربر "..matches[2].."از لیست مخاطبین پاک شد"
     end
     if matches[1] == "addcontact" and is_sudo(msg) then
     phone = matches[2]
     first_name = matches[3]
     last_name = matches[4]
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+          if group_lang then
     add_contact(phone, first_name, last_name, ok_cb, false)
    return "User With Phone +"..matches[2].." has been added"
+else
+   return "کاربر با شماره ی +"..matches[2].."اضافه شد"
+end
 end
  if matches[1] == "sendcontact" and is_sudo(msg) then
     phone = matches[2]
@@ -229,9 +297,15 @@ end
     send_contact(get_receiver(msg), phone, first_name, last_name, ok_cb, false)
 end
  if matches[1] == "mycontact" and is_sudo(msg) then
+      local hash = 'group:'..msg.to.id
+      local group_lang = redis:hget(hash,'lang')
+        if group_lang then
 	if not msg.from.phone then
 		return "I must Have Your Phone Number!"
-    end
+	else
+		return "شماره ی شما یافت نشد"
+     end
+end
     phone = msg.from.phone
     first_name = (msg.from.first_name or msg.from.phone)
     last_name = (msg.from.last_name or msg.from.id)
@@ -239,9 +313,15 @@ end
 end
 
     if matches[1] == "dialoglist" then
+        local hash = 'group:'..msg.to.id
+        local group_lang = redis:hget(hash,'lang')
+        if group_lang then
       get_dialog_list(get_dialog_list_callback, {target = msg.from.id})
       return "I've sent a group dialog list with both json and text format to your private messages"
+else
+      return "لیست گفت و گو در چت خصوصی ارسال شد"
     end
+end
     if matches[1] == "whois" then
       user_info("user#id"..matches[2],user_info_callback,{msg=msg})
     end
@@ -259,11 +339,17 @@ end
     	end
     end
 	if matches[1] == 'reload' then
+          local hash = 'group:'..msg.to.id
+          local group_lang = redis:hget(hash,'lang')
+            if group_lang then
 		receiver = get_receiver(msg)
 		reload_plugins(true)
 		post_msg(receiver, "Reloaded!", ok_cb, false)
 		return "Reloaded!"
+	else
+		return "بارگذاری مجدد انجام شد"
 	end
+end
 	--[[*For Debug*
 	if matches[1] == "vardumpmsg" and is_admin1(msg) then
 		local text = serpent.block(msg, {comment=false})
@@ -273,11 +359,17 @@ end
 		local data = load_data(_config.moderation.data)
 		local long_id = data[tostring(msg.to.id)]['long_id']
 		if not long_id then
+                local hash = 'group:'..msg.to.id
+                local group_lang = redis:hget(hash,'lang')
+                if group_lang then
 			data[tostring(msg.to.id)]['long_id'] = msg.to.peer_id 
 			save_data(_config.moderation.data, data)
 			return "Updated ID"
+		else
+			return "آیدی بروزرسانی شد"
 		end
-	end
+        end
+end
 	if matches[1] == 'addlog' and not matches[2] then
 		if is_log_group(msg) then
 			return "Already a Log_SuperGroup"
